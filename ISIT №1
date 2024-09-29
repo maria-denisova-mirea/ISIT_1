@@ -1,0 +1,288 @@
+import pandas as pd
+import math as m
+try:
+    data = pd.read_csv('./Survey_results.csv', engine='python')
+except:
+    data = pd.read_csv('https://github.com/maria-denisova-mirea/ISIT_1/blob/main/Survey_results.csv', engine='python') 
+data.head(10)
+
+data.columns = ['reviewee', 'gender', 'drink', 'age', 'healthy_lifestyle', 'smoking', 'eye_color',
+       'stressful', 'enough_sleep', 'lark_or_owl', 'waking_up', 'sleep_time',
+       'cafe_nearby', 'gourmet', 'office_job', 'homester',
+       'diseases', 'working_hand', 'zodiac_sign']
+data.head(5)
+
+data["gender"] = data["gender"].replace("Женщина", 0)
+data["gender"] = data["gender"].replace("Мужчина", 1)
+
+data["smoking"] = data["smoking"].replace("Да", 1)
+data["smoking"] = data["smoking"].replace("Нет", 0)
+
+data["enough_sleep"] = data["enough_sleep"].replace("Да", 1)
+data["enough_sleep"] = data["enough_sleep"].replace("Нет", 0)
+
+data["lark_or_owl"] = data["lark_or_owl"].replace("Жаворонок", 0)
+data["lark_or_owl"] = data["lark_or_owl"].replace("Сова", 1)
+
+data["cafe_nearby"] = data["cafe_nearby"].replace("Да", 1)
+data["cafe_nearby"] = data["cafe_nearby"].replace("Нет", 0)
+
+data["gourmet"] = data["gourmet"].replace("Да", 1)
+data["gourmet"] = data["gourmet"].replace("Нет", 0)
+
+data["office_job"] = data["office_job"].replace("Да", 1)
+data["office_job"] = data["office_job"].replace("Нет", 0)
+
+data["homester"] = data["homester"].replace("Да", 1)
+data["homester"] = data["homester"].replace("Нет", 0)
+
+data["diseases"] = data["diseases"].replace("Да", 1)
+data["diseases"] = data["diseases"].replace("Нет", 0)
+
+data["working_hand"] = data["working_hand"].replace("Левой", 0)
+data["working_hand"] = data["working_hand"].replace("Правой", 1)
+
+data.head(5)
+
+data["eye_color"] = data["eye_color"].str.lower()
+data["eye_color"] = data["eye_color"].str.strip()
+data["eye_color"] = data["eye_color"].replace("зелёный", "зеленый")
+data["eye_color"] = data["eye_color"].replace("коричневый", "карий")
+
+def check_conditions(eye_color):
+    spectrum = 3
+    gray = 0
+    if 'карий' in eye_color:
+        spectrum = 2
+        gray = 1
+    elif 'зеленый' in eye_color:
+        spectrum = 5
+    elif 'болотный' in eye_color:
+        spectrum = 5
+        gray = 1
+    elif 'голубой' in eye_color:
+        spectrum = 7
+    elif 'синий' in eye_color:
+        spectrum = 8
+    if 'серо' in eye_color:
+        gray = 1
+    return f"{spectrum}, {gray}"
+
+data['eye_color_2'] = data['eye_color'].apply(check_conditions)
+
+data.head(38)
+
+data.loc[data['reviewee'] == 37, 'eye_color_2'] = "6, 2"
+data.loc[data['reviewee'] == 38, 'eye_color_2'] = data['eye_color_2'].value_counts().index[0]
+
+data.tail(4)
+
+data["zodiac_sign"] = data["zodiac_sign"].str.lower()
+data.head(7)
+
+data.loc[(data['zodiac_sign'] != 'овен') & (data['zodiac_sign'] != 'телец') & (data['zodiac_sign'] != 'близнецы') & (data['zodiac_sign'] != 'рак') & (data['zodiac_sign'] != 'дева') & (data['zodiac_sign'] != 'лев') & (data['zodiac_sign'] != 'скорпион') & (data['zodiac_sign'] != 'весы') & (data['zodiac_sign'] != 'козерог') & (data['zodiac_sign'] != 'стрелец') & (data['zodiac_sign'] != 'водолей') & (data['zodiac_sign'] != 'рыбы'), 'zodiac_sign']
+
+max_val = data['age'].max()
+normed_col1 = data['age'] / max_val
+data['age'] = normed_col1
+
+normed_col1 = data['healthy_lifestyle'] / 100
+data['healthy_lifestyle'] = normed_col1
+
+normed_col1 = data['stressful'] / 100
+data['stressful'] = normed_col1
+
+max_val = data['sleep_time'].max()
+normed_col1 = data['sleep_time'] / max_val * 2
+data['sleep_time'] = normed_col1
+
+data.head(5)
+
+def convert_time_to_minutes(time_str):
+    hours, minutes = time_str.split(':')
+    total_minutes = int(hours) * 60 + int(minutes)
+    return total_minutes
+
+data['waking_up'] = data['waking_up'].apply(convert_time_to_minutes)
+data.head(5)
+
+max_val = data['waking_up'].max()
+normed_col1 = data['waking_up'] / max_val * 5
+data['waking_up'] = normed_col1
+
+data.head(5)
+
+k = 5
+train_amount = 30
+
+data_train = data.sample(n=train_amount)
+data_train.columns = data.columns
+data_test = data.drop(data_train.index)
+data_test.columns = data.columns
+
+def compare_colors(color1, color2):
+    c1_spectrum, c1_gray = color1.split(', ')
+    c2_spectrum, c2_gray = color2.split(', ')
+
+    spectrum_diff_1 = abs(int(c1_spectrum) - int(c2_spectrum))
+    spectrum_diff_2 = abs(int(c1_spectrum) - 10 - int(c2_spectrum))
+    spectrum_diff_3 = abs(int(c1_spectrum) - int(c2_spectrum) + 10)
+
+    gray_diff = abs(int(c1_gray) - int(c2_gray))
+    difference = min(spectrum_diff_1, spectrum_diff_2, spectrum_diff_3) + gray_diff
+    return difference
+
+def get_difference(row1, row2):
+    age1 = int(row1['age'])
+    age2 = int(row2['age'])
+
+    gender1 = int(row1['gender'])
+    gender2 = int(row2['gender'])
+
+    hl1 = int(row1['healthy_lifestyle'])
+    hl2 = int(row2['healthy_lifestyle'])
+
+    smoking1 = int(row1['smoking'])
+    smoking2 = int(row2['smoking'])
+
+    stress1 = int(row1['stressful'])
+    stress2 = int(row2['stressful'])
+
+    sleep1 = int(row1['enough_sleep'])
+    sleep2 = int(row2['enough_sleep'])
+
+    lo1 = int(row1['lark_or_owl'])
+    lo2 = int(row2['lark_or_owl'])
+
+    wake_up1 = int(row1['waking_up'])
+    wake_up2 = int(row2['waking_up'])
+
+    sleep_time1 = int(row1['sleep_time'])
+    sleep_time2 = int(row2['sleep_time'])
+
+    cafe1 = int(row1['cafe_nearby'])
+    cafe2 = int(row2['cafe_nearby'])
+
+    gourmet1 = int(row1['gourmet'])
+    gourmet2 = int(row2['gourmet'])
+
+    office1 = int(row1['office_job'])
+    office2 = int(row2['office_job'])
+
+    homester1 = int(row1['homester'])
+    homester2 = int(row2['homester'])
+
+    diseases1 = int(row1['diseases'])
+    diseases2 = int(row2['diseases'])
+
+    wh1 = int(row1['working_hand'])
+    wh2 = int(row2['working_hand'])
+
+    colors = compare_colors(row1['eye_color_2'], row2['eye_color_2'])
+
+    zodiac = 1 if row1['zodiac_sign'] == row2['zodiac_sign'] else 0
+    
+    difference = m.sqrt(pow(abs(age1 - age2), 2) + pow(abs(gender1 - gender2), 2) + pow(abs(hl1 - hl2), 2) + pow(abs(smoking1 - smoking2), 2) + pow(abs(stress1 - stress2), 2) + pow(abs(sleep1 - sleep2), 2) + pow(abs(lo1 - lo2), 2) + pow(abs(sleep_time1 - sleep_time2), 2) + pow(abs(cafe1 - cafe2), 2) + pow(abs(gourmet1 - gourmet2), 2) + pow(abs(office1 - office2), 2) + pow(abs(homester1 - homester2), 2) + pow(abs(diseases1 - diseases2), 2) + pow(abs(wh1 - wh2), 2) + pow(abs(wake_up1 - wake_up2), 2) + zodiac + pow(colors, 2))
+    
+    return difference
+
+def compare_second(tup):
+    return tup[1]
+
+guessed = 0
+for index_ts, row_ts in data_test.iterrows():
+    neighbours = []
+    for index_tr, row_tr in data_train.iterrows():
+        diff = get_difference(row_ts, row_tr)
+        if len(neighbours) < k:
+            neighbours.append((row_tr["drink"], diff))
+            neighbours = sorted(neighbours, key=compare_second)
+        elif neighbours[-1][1] > diff:
+            neighbours.remove(neighbours[-1])
+            neighbours.append((row_tr["drink"], diff))
+            neighbours = sorted(neighbours, key=compare_second)
+    for_tea = 0
+    for_coffee = 0
+    for n in neighbours:
+        if n[0] == "Чай":
+            for_tea += 1
+        else:
+            for_coffee += 1
+    decision = 'чай' if for_tea > for_coffee else 'кофе'
+    guessed += (1 if decision == row_ts['drink'].lower() else 0)
+    print(f"Метод k ({k}) ближайших соседей считает, что любимый напиток опрашиваемого №{row_ts['reviewee']} - {decision}. На самом деле: {row_ts['drink'].lower()}")
+print(f"Всего отгадано: {guessed} из {38 - train_amount}. Точность: {guessed * 100 / (38 - train_amount)}%")
+
+def get_difference_improved(row1, row2):
+    age1 = int(row1['age'])
+    age2 = int(row2['age'])
+
+    gender1 = int(row1['gender'])
+    gender2 = int(row2['gender'])
+
+    hl1 = int(row1['healthy_lifestyle'])
+    hl2 = int(row2['healthy_lifestyle'])
+
+    smoking1 = int(row1['smoking'])
+    smoking2 = int(row2['smoking'])
+
+    stress1 = int(row1['stressful'])
+    stress2 = int(row2['stressful'])
+
+    sleep1 = int(row1['enough_sleep'])
+    sleep2 = int(row2['enough_sleep'])
+
+    lo1 = int(row1['lark_or_owl'])
+    lo2 = int(row2['lark_or_owl'])
+
+    wake_up1 = int(row1['waking_up'])
+    wake_up2 = int(row2['waking_up'])
+
+    sleep_time1 = int(row1['sleep_time'])
+    sleep_time2 = int(row2['sleep_time'])
+
+    cafe1 = int(row1['cafe_nearby'])
+    cafe2 = int(row2['cafe_nearby'])
+
+    gourmet1 = int(row1['gourmet'])
+    gourmet2 = int(row2['gourmet'])
+
+    office1 = int(row1['office_job'])
+    office2 = int(row2['office_job'])
+
+    homester1 = int(row1['homester'])
+    homester2 = int(row2['homester'])
+
+    diseases1 = int(row1['diseases'])
+    diseases2 = int(row2['diseases'])
+    
+    difference = m.sqrt(pow(abs(age1 - age2), 2) + pow(abs(gender1 - gender2), 2) + pow(abs(hl1 - hl2), 2) + pow(abs(smoking1 - smoking2) * 2, 2) + pow(abs(stress1 - stress2), 2) + pow(abs(sleep1 - sleep2) * 2, 2) + pow(abs(lo1 - lo2), 2) + pow(abs(sleep_time1 - sleep_time2) * 2, 2) + pow(abs(cafe1 - cafe2) * 2, 2) + pow(abs(gourmet1 - gourmet2), 2) + pow(abs(office1 - office2), 2) + pow(abs(homester1 - homester2), 2) + pow(abs(diseases1 - diseases2) * 2, 2) + pow(abs(wake_up1 - wake_up2), 2))
+    
+    return difference
+
+def compare_second(tup):
+    return tup[1]
+
+guessed = 0
+for index_ts, row_ts in data_test.iterrows():
+    neighbours = []
+    for index_tr, row_tr in data_train.iterrows():
+        diff = get_difference_improved(row_ts, row_tr)
+        if len(neighbours) < k:
+            neighbours.append((row_tr["drink"], diff))
+            neighbours = sorted(neighbours, key=compare_second)
+        elif neighbours[-1][1] > diff:
+            neighbours.remove(neighbours[-1])
+            neighbours.append((row_tr["drink"], diff))
+            neighbours = sorted(neighbours, key=compare_second)
+    for_tea = 0
+    for_coffee = 0
+    for n in neighbours:
+        if n[0] == "Чай":
+            for_tea += 1
+        else:
+            for_coffee += 1
+    decision = 'чай' if for_tea > for_coffee else 'кофе'
+    guessed += (1 if decision == row_ts['drink'].lower() else 0)
+    print(f"Метод k ({k}) ближайших соседей считает, что любимый напиток опрашиваемого №{row_ts['reviewee']} - {decision}. На самом деле: {row_ts['drink'].lower()}")
+print(f"Всего отгадано: {guessed} из {38 - train_amount}. Точность: {guessed * 100 / (38 - train_amount)}%")
